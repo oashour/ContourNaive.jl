@@ -18,6 +18,7 @@ import Base: push!, length, eltype, show
 
 struct Curve2{T}
     vertices::Vector{SVector{2,T}}
+    indices::Vector{CartesianIndex{2}}
 end
 Curve2(::Type{T}) where {T} = Curve2(SVector{2,T}[])
 show(io::IO, ::MIME"text/plain", c2::Curve2) = write(io, "$(typeof(c2))\n  with $(length(c2.vertices)-1) vertices")
@@ -239,7 +240,7 @@ end
 
 # Given a cell and a starting edge, we follow the contour line until we either
 # hit the boundary of the input data, or we form a closed contour.
-function chase!(cells, curve, x, y, z, h, start, entry_edge, xi_range, yi_range, ::Type{VT}) where VT
+function chase!(cells, curve, x, y, z, h, start, entry_edge, xi_range, yi_range, ::Type{VT},ind_arr) where VT
 
     ind = start
 
@@ -255,6 +256,7 @@ function chase!(cells, curve, x, y, z, h, start, entry_edge, xi_range, yi_range,
         push!(curve, interpolate(x, y, z, h, ind, exit_edge, VT))
 
         ind, entry_edge = advance_edge(ind, exit_edge)
+        push!(ind_arr, ind)
 
         !((ind[1], ind[2], entry_edge) != (start[1], start[2], loopback_edge) &&
            ind[2] ∈ yi_range && ind[1] ∈ xi_range) && break
@@ -282,9 +284,11 @@ function trace_contour(x, y, z, h::Number, cells::Dict)
 
     @inbounds while length(cells) > 0
         contour_arr = VT[]
+        ind_arr = Tuple{Int64,Int64}[]
 
         # Pick initial box
         ind, cell = first(cells)
+        push!(ind_arr, ind)
 
         # Pick a starting edge
         crossing = get_first_crossing(cell)
@@ -294,10 +298,10 @@ function trace_contour(x, y, z, h::Number, cells::Dict)
         push!(contour_arr, interpolate(x, y, z, h, ind, starting_edge, VT))
 
         # Start trace in forward direction
-        ind_end = chase!(cells, contour_arr, x, y, z, h, ind, starting_edge, xi_range, yi_range, VT)
+        ind_end = chase!(cells, contour_arr, x, y, z, h, ind, starting_edge, xi_range, yi_range, VT, ind_arr)
 
         if ind == ind_end
-            push!(contours.lines, Curve2(contour_arr))
+            push!(contours.lines, Curve2(contour_arr, CartesianIndex.(ind_arr)))
             continue
         end
 
@@ -305,10 +309,10 @@ function trace_contour(x, y, z, h::Number, cells::Dict)
 
         if ind[2] ∈ yi_range && ind[1] ∈ xi_range
             # Start trace in reverse direction
-            chase!(cells, reverse!(contour_arr), x, y, z, h, ind, starting_edge, xi_range, yi_range, VT)
+            chase!(cells, reverse!(contour_arr), x, y, z, h, ind, starting_edge, xi_range, yi_range, VT, ind_arr)
         end
 
-        push!(contours.lines, Curve2(contour_arr))
+        push!(contours.lines, Curve2(contour_arr, CartesianIndex.(ind_arr)))
     end
 
     return contours
