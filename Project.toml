@@ -3,6 +3,7 @@ uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.5.7"
 
 [deps]
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
