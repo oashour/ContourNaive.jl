@@ -311,6 +311,7 @@ function trace_contour(x, y, z, h::Number, cells::Dict)
 
         # Start trace in forward direction
         ind_end = chase!(cells, contour_arr, x, y, z, h, ind, starting_edge, xi_range, yi_range, VT, ind_arr)
+        #push!(ind_arr, ind_end)
 
         if ind == ind_end
             push!(contours.lines, Curve2(contour_arr, CartesianIndex.(ind_arr)))
