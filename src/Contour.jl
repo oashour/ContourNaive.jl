@@ -12,7 +12,8 @@ export
     level,
     levels,
     lines,
-    coordinates
+    coordinates,
+    indices
 
 import Base: push!, length, eltype, show
 
@@ -120,6 +121,17 @@ function coordinates(c::Curve2{T}) where {T}
         ylist[i] = v[2]
     end
     xlist, ylist
+end
+
+function indices(c::Curve2{T}) where {T}
+
+    as_ints(a::AbstractArray{CartesianIndex{L}}) where L = reshape(reinterpret(Int, a), (L, size(a)...)) # from internet, must change
+
+    zi = c.indices
+    xi = as_ints(zi)[1,:] # has a 0 sometimes
+    yi = as_ints(zi)[2,:]
+
+    xi, yi, zi
 end
 
 # The marching squares algorithm defines 16 cell types
@@ -251,12 +263,13 @@ function chase!(cells, curve, x, y, z, h, start, entry_edge, xi_range, yi_range,
     loopback_edge = entry_edge
 
     @inbounds while true
+        push!(ind_arr, ind)
+
         exit_edge = get_next_edge!(cells, ind, entry_edge)
 
         push!(curve, interpolate(x, y, z, h, ind, exit_edge, VT))
 
         ind, entry_edge = advance_edge(ind, exit_edge)
-        push!(ind_arr, ind)
 
         !((ind[1], ind[2], entry_edge) != (start[1], start[2], loopback_edge) &&
            ind[2] ∈ yi_range && ind[1] ∈ xi_range) && break
@@ -288,7 +301,6 @@ function trace_contour(x, y, z, h::Number, cells::Dict)
 
         # Pick initial box
         ind, cell = first(cells)
-        push!(ind_arr, ind)
 
         # Pick a starting edge
         crossing = get_first_crossing(cell)
